@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>扑克牌插入排序演示</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+
+        body {
+            background-color: #2c3e50;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 30px;
+            min-height: 100vh;
+        }
+
+        .title {
+            color: white;
+            font-size: 28px;
+            margin-bottom: 20px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .tips {
+            color: #ecf0f1;
+            font-size: 16px;
+            margin-bottom: 30px;
+            text-align: center;
+            line-height: 1.6;
+        }
+
+        /* 扑克牌容器 */
+        .card-container {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin: 40px 0;
+            min-height: 180px;
+            padding: 20px;
+            background-color: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            width: 90%;
+            max-width: 1000px;
+        }
+
+        /* 扑克牌样式 */
+        .card {
+            width: 100px;
+            height: 140px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 10px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .card.red {
+            color: #e74c3c;
+        }
+
+        .card.black {
+            color: #2c3e50;
+        }
+
+        .card-top {
+            font-size: 20px;
+        }
+
+        .card-center {
+            font-size: 32px;
+            text-align: center;
+        }
+
+        .card-bottom {
+            font-size: 20px;
+            transform: rotate(180deg);
+        }
+
+        /* 排序状态样式 */
+        .card.current {
+            border: 3px solid #f39c12;
+            transform: translateY(-15px);
+            box-shadow: 0 8px 16px rgba(243, 156, 18,0.4);
+        }
+
+        .card.sorted {
+            border: 3px solid #27ae60;
+        }
+
+        .card.comparing {
+            border: 3px solid #3498db;
+        }
+
+        /* 按钮区域 */
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: 0.2s;
+            font-weight: bold;
+        }
+
+        #startBtn {
+            background-color: #27ae60;
+            color: white;
+        }
+
+        #nextBtn {
+            background-color: #3498db;
+            color: white;
+        }
+
+        #resetBtn {
+            background-color: #e67e22;
+            color: white;
+        }
+
+        button:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+        }
+
+        /* 步骤提示 */
+        .step-info {
+            color: white;
+            font-size: 18px;
+            margin-top: 20px;
+            min-height: 30px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <h1 class="title">🃏 扑克牌插入排序手动演示</h1>
+    <p class="tips">插入排序原理：将未排序的牌，逐个插入到已排序的牌组中<br>点击【开始演示】生成随机牌 → 点击【下一步】单步执行排序</p>
+
+    <!-- 扑克牌展示区域 -->
+    <div class="card-container" id="cardContainer"></div>
+
+    <!-- 操作按钮 -->
+    <div class="btn-group">
+        <button id="startBtn">开始演示</button>
+        <button id="nextBtn" disabled>下一步</button>
+        <button id="resetBtn">重置</button>
+    </div>
+
+    <!-- 步骤提示 -->
+    <div class="step-info" id="stepInfo">准备就绪，请点击开始演示</div>
+
+    <script>
+        // 核心数据
+        const suits = ['♥', '♦', '♣', '♠']; // 花色
+        const values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']; // 牌面
+        let cards = []; // 存储扑克牌对象
+        let currentStep = 1; // 当前排序步骤
+        let totalSteps = 0; // 总步骤数
+
+        // DOM元素
+        const cardContainer = document.getElementById('cardContainer');
+        const startBtn = document.getElementById('startBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const stepInfo = document.getElementById('stepInfo');
+
+        // 生成随机扑克牌
+        function generateRandomCards() {
+            cards = [];
+            // 生成8张随机牌
+            for (let i = 0; i < 8; i++) {
+                const suit = suits[Math.floor(Math.random() * 4)];
+                const value = values[Math.floor(Math.random() * 13)];
+                const numValue = values.indexOf(value) + 1; // 数字值，用于排序
+                cards.push({ suit, value, numValue });
+            }
+            totalSteps = cards.length;
+            renderCards();
+        }
+
+        // 渲染扑克牌到页面
+        function renderCards() {
+            cardContainer.innerHTML = '';
+            cards.forEach((card, index) => {
+                const cardEl = document.createElement('div');
+                // 判断颜色
+                const isRed = card.suit === '♥' || card.suit === '♦';
+                cardEl.className = `card ${isRed ? 'red' : 'black'}`;
+                
+                // 排序状态标记
+                if (index < currentStep - 1) cardEl.classList.add('sorted'); // 已排序
+                if (index === currentStep - 1) cardEl.classList.add('current'); // 当前操作牌
+                if (index >= currentStep) cardEl.classList.add('comparing'); // 待比较牌
+                
+                // 扑克牌内容
+                cardEl.innerHTML = `
+                    <div class="card-top">${card.value}${card.suit}</div>
+                    <div class="card-center">${card.value}</div>
+                    <div class="card-bottom">${card.value}${card.suit}</div>
+                `;
+                cardContainer.appendChild(cardEl);
+            });
+        }
+
+        // 执行单步插入排序
+        function nextStep() {
+            if (currentStep >= totalSteps) {
+                stepInfo.textContent = '✅ 排序完成！';
+                nextBtn.disabled = true;
+                renderCards();
+                return;
+            }
+
+            // 插入排序核心逻辑
+            let key = cards[currentStep]; // 当前要插入的牌
+            let j = currentStep - 1;
+
+            // 向前比较，移动元素
+            while (j >= 0 && cards[j].numValue > key.numValue) {
+                cards[j + 1] = cards[j];
+                j--;
+            }
+            cards[j + 1] = key;
+
+            // 更新提示
+            stepInfo.textContent = `步骤 ${currentStep + 1}/${totalSteps}：将 ${key.value}${key.suit} 插入到正确位置`;
+            
+            currentStep++;
+            renderCards();
+        }
+
+        // 绑定按钮事件
+        startBtn.addEventListener('click', () => {
+            generateRandomCards();
+            currentStep = 1;
+            nextBtn.disabled = false;
+            stepInfo.textContent = `开始排序 | 共 ${totalSteps} 个步骤`;
+            renderCards();
+        });
+
+        nextBtn.addEventListener('click', nextStep);
+
+        resetBtn.addEventListener('click', () => {
+            cards = [];
+            currentStep = 1;
+            totalSteps = 0;
+            cardContainer.innerHTML = '';
+            nextBtn.disabled = true;
+            stepInfo.textContent = '准备就绪，请点击开始演示';
+        });
+    </script>
+</body>
+</html>
